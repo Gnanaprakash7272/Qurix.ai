@@ -249,7 +249,9 @@ async def oauth_login(provider: str, request: Request):
         return {"error": "Invalid provider"}
     
     # Dynamically build the redirect URI using the host that the user accessed
-    redirect_uri = f"{request.url.scheme}://{request.url.netloc}/api/auth/callback/{provider}"
+    # Render sits behind a proxy, so we check x-forwarded-proto to ensure we use https instead of http
+    scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
+    redirect_uri = f"{scheme}://{request.url.netloc}/api/auth/callback/{provider}"
     return await client.authorize_redirect(request, redirect_uri)
 
 @app.get("/api/auth/callback/{provider}")
