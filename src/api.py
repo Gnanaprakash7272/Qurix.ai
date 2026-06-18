@@ -293,7 +293,11 @@ async def oauth_callback(provider: str, request: Request):
     auth_token = f"oauth_token_{email}"
     
     # Redirect to frontend with token and email
-    return RedirectResponse(url=f"http://localhost:5175/?token={auth_token}&email={email}")
+    frontend_url = f"{request.url.scheme}://{request.url.netloc}"
+    if "localhost:8000" in frontend_url or "127.0.0.1:8000" in frontend_url:
+        frontend_url = "http://localhost:5175"
+        
+    return RedirectResponse(url=f"{frontend_url}/?token={auth_token}&email={email}")
 
 # ─────────────────────────────────────────────
 # Data Endpoints
