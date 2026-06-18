@@ -63,7 +63,7 @@ function App() {
   const [loginError, setLoginError] = useState('');
   const [activeTab, setActiveTab] = useState('dashboard');
   const [apiKey, setApiKey] = useState('');
-  const [selectedModel, setSelectedModel] = useState('claude-sonnet-4.6');
+  const [selectedModel, setSelectedModel] = useState('gemini-2.5-flash');
   const [profileName, setProfileName] = useState('default');
   const [liveUrl, setLiveUrl] = useState(null);
   const [vaultData, setVaultData] = useState([]);
@@ -594,28 +594,27 @@ function App() {
               <p>Select your LLM provider and API key.</p>
               <form onSubmit={handleSaveConfig} className="auth-form">
                 <div className="input-group">
-                  <label>Cloud Agent Model</label>
+                  <label>Agent Model</label>
                   <select 
                     value={selectedModel} 
                     onChange={(e) => setSelectedModel(e.target.value)}
                     className="auth-input"
                   >
-                    <option value="claude-sonnet-4.6">Claude Sonnet 4.6 (Recommended)</option>
-                    <option value="claude-opus-4.6">Claude Opus 4.6 (Best Quality)</option>
-                    <option value="gpt-5.4-mini">GPT-5.4 Mini (Budget)</option>
+                    <option value="gemini-2.5-flash">Gemini 2.5 Flash (Recommended)</option>
+                    <option value="gemini-2.5-pro">Gemini 2.5 Pro (Best Quality)</option>
+                    <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
                   </select>
                 </div>
                 <div className="input-group">
-                  <label>☁️ Browser Use API Key</label>
+                  <label>🔑 Gemini API Key (Optional if set in Render)</label>
                   <input 
                     type="password" 
-                    placeholder="bu_..."
+                    placeholder="AIzaSy..."
                     value={apiKey}
                     onChange={(e) => setApiKey(e.target.value)}
                     className="auth-input"
-                    required
                   />
-                  <small style={{ color: '#9ca3af', fontSize: '11px', marginTop: '4px', display: 'block' }}>Get your key at cloud.browser-use.com</small>
+                  <small style={{ color: '#9ca3af', fontSize: '11px', marginTop: '4px', display: 'block' }}>Optional if GEMINI_API_KEY is configured in your server environment variables.</small>
                 </div>
                 <div className="input-group">
                   <label>Browser Profile</label>

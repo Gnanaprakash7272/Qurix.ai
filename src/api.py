@@ -134,29 +134,42 @@ app.mount("/exports", StaticFiles(directory="exports"), name="exports")
 
 scheduler = AsyncIOScheduler()
 
-async def execute_scheduled_task(task_str: str, model_name: str, bu_api_key: str):
+async def execute_scheduled_task(task_str: str, model_name: str, gemini_api_key: str):
     logger.info(f"Running scheduled task: {task_str}")
-    try:
-        from browser_use_sdk.v3 import AsyncBrowserUse
-        
-        # Save session to DB
-        conn = sqlite3.connect('aether.db')
-        c = conn.cursor()
-        c.execute('INSERT INTO sessions (task, model, status) VALUES (?, ?, ?)', (task_str, model_name, "running"))
-        db_session_id = c.lastrowid
-        conn.commit()
-        conn.close()
+    
+    # Save session to DB
+    conn = sqlite3.connect('aether.db')
+    c = conn.cursor()
+    c.execute('INSERT INTO sessions (task, model, status) VALUES (?, ?, ?)', (task_str, model_name, "running"))
+    db_session_id = c.lastrowid
+    conn.commit()
+    conn.close()
 
-        effective_key = bu_api_key or os.getenv("BROWSER_USE_API_KEY", "")
+    browser = None
+    try:
+        from browser_use import Agent, Browser, ChatGoogle
+        
+        effective_key = gemini_api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         if not effective_key:
-            logger.error("No Browser Use API key set for scheduled task!")
+            logger.error("No Gemini API key set for scheduled task!")
             return
 
-        client = AsyncBrowserUse(api_key=effective_key)
+        gemini_model = model_name
+        valid_models = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash']
+        if not gemini_model or gemini_model not in valid_models:
+            gemini_model = "gemini-2.5-flash"
+
+        llm = ChatGoogle(model=gemini_model, api_key=effective_key)
+        browser = Browser(headless=True, disable_security=True)
+
+        agent = Agent(
+            task=task_str,
+            llm=llm,
+            browser=browser
+        )
         
-        # Run directly without streaming
-        result = await client.run(task_str, model=model_name)
-        final_output = result.output
+        history = await agent.run()
+        final_output = history.final_result() or "Task completed successfully."
 
         db = sqlite3.connect('aether.db')
         db.execute('UPDATE sessions SET final_result = ?, status = ? WHERE id = ?',
@@ -174,6 +187,12 @@ async def execute_scheduled_task(task_str: str, model_name: str, bu_api_key: str
             db.close()
         except Exception:
             pass
+    finally:
+        if browser:
+            try:
+                await browser.close()
+            except Exception:
+                pass
 
 @app.on_event("startup")
 async def start_scheduler():
@@ -400,11 +419,10 @@ async def agent_websocket(websocket: WebSocket):
     await websocket.accept()
 
     current_agent_task = None
-    current_cloud_session_id = None
 
     try:
-        async def run_cloud_agent(task_str: str, model_name: str, bu_api_key: str, ws: WebSocket):
-            nonlocal current_agent_task, current_cloud_session_id
+        async def run_local_agent(task_str: str, model_name: str, user_api_key: str, ws: WebSocket):
+            nonlocal current_agent_task
 
             # Save session to DB
             conn = sqlite3.connect('aether.db')
@@ -414,96 +432,96 @@ async def agent_websocket(websocket: WebSocket):
             conn.commit()
             conn.close()
 
+            browser = None
             try:
-                from browser_use_sdk.v3 import AsyncBrowserUse
+                from browser_use import Agent, Browser, ChatGoogle
 
-                # Determine the API key to use
-                # Only use the UI-provided key if it's a real Browser Use key (starts with bu_)
-                # Old Gemini (AIza...) or OpenAI (sk-...) keys are silently ignored here
-                env_key = os.getenv("BROWSER_USE_API_KEY", "")
-                if bu_api_key and bu_api_key.startswith("bu_"):
-                    effective_key = bu_api_key
-                else:
-                    effective_key = env_key
-
+                # Resolve key
+                effective_key = user_api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
                 if not effective_key:
-                    await ws.send_json({"type": "error", "message": "No Browser Use API key found! Go to Settings and enter your bu_... key, or add BROWSER_USE_API_KEY to .env"})
+                    await ws.send_json({"type": "error", "message": "No Gemini API key found! Go to Settings and enter your API key, or add GEMINI_API_KEY to your Render environment."})
                     return
 
-                client = AsyncBrowserUse(api_key=effective_key)
-
-                # Auto-correct model: ensure it matches the Cloud API's allowed enum
-                cloud_model = model_name
-                valid_models = ['bu-mini', 'bu-max', 'bu-ultra', 'gemini-3-flash', 'claude-sonnet-4.6', 'claude-opus-4.6', 'gpt-5.4-mini']
-                if not cloud_model or cloud_model not in valid_models:
-                    old_model = cloud_model
-                    cloud_model = "claude-sonnet-4.6"
-                    await ws.send_json({
-                        "type": "status",
-                        "message": f"ℹ️ Switched to claude-sonnet-4.6 (Model '{old_model}' is not supported by Browser Use Cloud)"
-                    })
+                # Auto-correct model
+                gemini_model = model_name
+                valid_models = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash']
+                if not gemini_model or gemini_model not in valid_models:
+                    gemini_model = "gemini-2.5-flash"
 
                 await ws.send_json({
                     "type": "status",
-                    "message": f"☁️ Connecting to Browser Use Cloud with {cloud_model}..."
+                    "message": f"🤖 Initializing Gemini Agent with {gemini_model}..."
                 })
 
-                # Create a session to get the live_url for the browser preview
-                # We do NOT pass task here so the session stays 'idle' and can accept client.run()
-                # We MUST pass model explicitly so the API doesn't return an unsupported default model (fixes Pydantic enum errors)
-                session = await client.sessions.create(model=cloud_model)
-                current_cloud_session_id = session.id
+                # Initialize LLM
+                llm = ChatGoogle(model=gemini_model, api_key=effective_key)
 
-                # Send the live browser URL to the frontend immediately
-                live_url = getattr(session, 'live_url', None) or getattr(session, 'liveUrl', None)
-                if live_url:
-                    await ws.send_json({
-                        "type": "live_url",
-                        "live_url": live_url
-                    })
-                    await ws.send_json({
-                        "type": "status",
-                        "message": f"🖥️ Live browser ready! Agent is working autonomously..."
-                    })
+                # Initialize local Browser in headless mode
+                browser = Browser(headless=True, disable_security=True)
 
-                # Stream messages from the cloud agent natively
-                step_count = 0
-                run = client.run(task_str, model=cloud_model, session_id=session.id)
-                
-                async for msg in run:
-                    # Check for cancellation
-                    if current_agent_task and current_agent_task.cancelled():
-                        await client.sessions.stop(session.id, strategy="task")
-                        break
+                # Callback for each step
+                async def on_step(state, output, step_number):
+                    screenshot_data = None
+                    if state.screenshot:
+                        if state.screenshot.startswith('data:image'):
+                            screenshot_data = state.screenshot
+                        else:
+                            screenshot_data = f"data:image/png;base64,{state.screenshot}"
 
-                    role = getattr(msg, 'role', 'assistant')
-                    summary = getattr(msg, 'summary', '')
-                    msg_type = getattr(msg, 'type', '')
-                    screenshot_url = getattr(msg, 'screenshot_url', None)
+                    actions_list = []
+                    if output.action:
+                        for act in output.action:
+                            act_dict = act.model_dump() if hasattr(act, 'model_dump') else {}
+                            actions_list.append(act_dict)
 
-                    step_count += 1
                     step_update = {
                         "type": "step",
-                        "step": step_count,
-                        "url": "",
-                        "thinking": summary if role == "assistant" else "",
-                        "memory": "",
-                        "next_goal": summary if role == "tool" else "",
-                        "evaluation": "",
-                        "actions": [{"role": role, "type": msg_type, "summary": summary}],
-                        "screenshot": screenshot_url
+                        "step": step_number,
+                        "url": state.url or "",
+                        "thinking": output.thinking or "",
+                        "evaluation": output.evaluation_previous_goal or "",
+                        "memory": output.memory or "",
+                        "next_goal": output.next_goal or "",
+                        "actions": actions_list,
+                        "screenshot": screenshot_data
                     }
+                    
+                    # Insert step into database
                     try:
-                        await ws.send_json(step_update)
-                    except Exception:
-                        break
+                        conn = sqlite3.connect('aether.db')
+                        c = conn.cursor()
+                        c.execute('''
+                            INSERT INTO steps (session_id, step_number, url, thinking, next_goal, actions)
+                            VALUES (?, ?, ?, ?, ?, ?)
+                        ''', (
+                            db_session_id,
+                            step_number,
+                            state.url or "",
+                            output.thinking or "",
+                            output.next_goal or "",
+                            json.dumps(actions_list)
+                        ))
+                        conn.commit()
+                        conn.close()
+                    except Exception as db_err:
+                        logger.error(f"DB step save error: {db_err}")
 
-                # Task is done
-                final_output = None
-                if getattr(run, "result", None) is not None:
-                    final_output = run.result.output
-                if not final_output:
-                    final_output = "Task completed."
+                    await ws.send_json(step_update)
+
+                agent = Agent(
+                    task=task_str,
+                    llm=llm,
+                    browser=browser,
+                    register_new_step_callback=on_step
+                )
+
+                await ws.send_json({
+                    "type": "status",
+                    "message": "🖥️ Starting local browser session..."
+                })
+
+                history = await agent.run()
+                final_output = history.final_result() or "Task completed successfully."
 
                 # Update DB
                 try:
@@ -513,7 +531,7 @@ async def agent_websocket(websocket: WebSocket):
                     db.commit()
                     db.close()
                 except Exception as e:
-                    logger.error(f"DB error: {e}")
+                    logger.error(f"DB update error: {e}")
 
                 await ws.send_json({
                     "type": "result",
@@ -523,15 +541,6 @@ async def agent_websocket(websocket: WebSocket):
                 })
 
             except asyncio.CancelledError:
-                # Stop the cloud session gracefully
-                if current_cloud_session_id:
-                    try:
-                        from browser_use_sdk.v3 import AsyncBrowserUse
-                        effective_key = bu_api_key or os.getenv("BROWSER_USE_API_KEY", "")
-                        client = AsyncBrowserUse(api_key=effective_key)
-                        await client.sessions.stop(current_cloud_session_id, strategy="task")
-                    except Exception:
-                        pass
                 try:
                     db = sqlite3.connect('aether.db')
                     db.execute('UPDATE sessions SET status = ? WHERE id = ?', ('stopped', db_session_id))
@@ -543,7 +552,7 @@ async def agent_websocket(websocket: WebSocket):
 
             except Exception as e:
                 error_msg = str(e)
-                logger.error(f"Cloud agent error: {error_msg}")
+                logger.error(f"Agent execution error: {error_msg}")
                 try:
                     db = sqlite3.connect('aether.db')
                     db.execute('UPDATE sessions SET status = ?, final_result = ? WHERE id = ?',
@@ -554,8 +563,12 @@ async def agent_websocket(websocket: WebSocket):
                     pass
                 await ws.send_json({"type": "error", "message": f"Error: {error_msg}"})
             finally:
+                if browser:
+                    try:
+                        await browser.close()
+                    except Exception as close_err:
+                        logger.error(f"Error closing browser: {close_err}")
                 current_agent_task = None
-                current_cloud_session_id = None
 
         # ─── WebSocket message loop ───
         while True:
@@ -570,9 +583,9 @@ async def agent_websocket(websocket: WebSocket):
             if not task_str:
                 continue
 
-            # The user's Browser Use API key (bu_...) from the UI Settings
-            bu_api_key = data.get("api_key", "")
-            model_name = data.get("model", "claude-sonnet-4.6")
+            # The user's Gemini API key from the UI Settings
+            user_api_key = data.get("api_key", "")
+            model_name = data.get("model", "gemini-2.5-flash")
 
             # Cancel any existing task
             if current_agent_task and not current_agent_task.done():
@@ -580,7 +593,7 @@ async def agent_websocket(websocket: WebSocket):
                 await asyncio.sleep(0.5)
 
             current_agent_task = asyncio.create_task(
-                run_cloud_agent(task_str, model_name, bu_api_key, websocket)
+                run_local_agent(task_str, model_name, user_api_key, websocket)
             )
 
     except WebSocketDisconnect:
