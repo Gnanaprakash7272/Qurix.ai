@@ -8,3 +8,4 @@ playwright
 authlib
 itsdangerous
 httpx
+apscheduler
