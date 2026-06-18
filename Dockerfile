@@ -1,3 +1,12 @@
+# Stage 1: Build React Frontend
+FROM node:20-slim AS frontend-builder
+WORKDIR /app/ui
+COPY ui/package*.json ./
+RUN npm install
+COPY ui/ ./
+RUN npm run build
+
+# Stage 2: Build Python Backend
 FROM python:3.11-slim
 
 # Set environment variables
@@ -23,8 +32,11 @@ RUN python -m playwright install-deps chromium
 # Copy application code
 COPY . .
 
-# Expose port
-EXPOSE 8080
+# Copy built frontend from Stage 1 to the location FastAPI expects
+COPY --from=frontend-builder /app/ui/dist /app/ui/dist
 
-# Start the FastAPI server (Cloud Run uses the PORT env variable)
-CMD uvicorn src.api:app --host 0.0.0.0 --port ${PORT:-8080}
+# Expose the default Render port
+EXPOSE 10000
+
+# Start the FastAPI server using the PORT environment variable provided by Render
+CMD python -m uvicorn src.api:app --host 0.0.0.0 --port $PORT
