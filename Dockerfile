@@ -39,4 +39,4 @@ COPY --from=frontend-builder /app/ui/dist /app/ui/dist
 EXPOSE 10000
 
 # Start the FastAPI server using the PORT environment variable provided by Render
-CMD python -m uvicorn src.api:app --host 0.0.0.0 --port $PORT
+CMD python -m uvicorn src.api:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips "*"
