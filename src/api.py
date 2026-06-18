@@ -247,7 +247,9 @@ async def oauth_login(provider: str, request: Request):
     client = oauth.create_client(provider)
     if not client:
         return {"error": "Invalid provider"}
-    redirect_uri = f"http://localhost:8000/api/auth/callback/{provider}"
+    
+    # Dynamically build the redirect URI using the host that the user accessed
+    redirect_uri = f"{request.url.scheme}://{request.url.netloc}/api/auth/callback/{provider}"
     return await client.authorize_redirect(request, redirect_uri)
 
 @app.get("/api/auth/callback/{provider}")
