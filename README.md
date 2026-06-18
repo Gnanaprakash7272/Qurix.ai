@@ -1,4 +1,4 @@
-# Qurix.ai (Autonomous Browser Agent)
+# Qorix.ai (Autonomous Browser Agent)
 
 A minimal, powerful autonomous browser agent powered by **browser-use** and **Gemini 2.0**.
 
