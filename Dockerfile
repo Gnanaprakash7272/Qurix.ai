@@ -24,7 +24,7 @@ RUN playwright install-deps chromium
 COPY . .
 
 # Expose port
-EXPOSE 8000
+EXPOSE 8080
 
-# Start the FastAPI server
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Start the FastAPI server (Cloud Run uses the PORT env variable)
+CMD uvicorn src.api:app --host 0.0.0.0 --port ${PORT:-8080}

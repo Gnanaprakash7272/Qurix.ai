@@ -13,21 +13,17 @@ ENV/
 
 # Node
 node_modules/
-dist/
-build/
-ui/dist/
 ui/node_modules/
+npm-debug.log
 
-# Databases
-*.sqlite3
-*.db
-aether.db
+# Git
+.git/
+.gitignore
 
 # Project specific
-exports/
+screenshots/
 reports/
 logs/
-screenshots/
 .pytest_cache/
 .coverage
 htmlcov/

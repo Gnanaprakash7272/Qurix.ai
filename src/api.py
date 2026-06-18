@@ -584,6 +584,13 @@ async def agent_websocket(websocket: WebSocket):
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
 
+from fastapi.staticfiles import StaticFiles
+import os
+
+# Serve the React frontend in production
+if os.path.isdir("ui/dist"):
+    app.mount("/", StaticFiles(directory="ui/dist", html=True), name="static")
+
 
 if __name__ == "__main__":
     import uvicorn
