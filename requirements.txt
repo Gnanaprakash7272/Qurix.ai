@@ -1,0 +1,6 @@
+browser-use
+langchain-google-genai
+python-dotenv
+fastapi
+uvicorn
+websockets

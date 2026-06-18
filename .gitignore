@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+ENV/
+
+# Environment variables
+.env
+.env.local
+
+# Node
+node_modules/
+dist/
+build/
+ui/dist/
+ui/node_modules/
+
+# Databases
+*.sqlite3
+*.db
+aether.db
+
+# Project specific
+exports/
+reports/
+logs/
+.pytest_cache/
+.coverage
+htmlcov/

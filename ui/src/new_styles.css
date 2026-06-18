@@ -1,0 +1,276 @@
+
+/* =========================================
+   AGENT CHAT UI REDESIGN
+   ========================================= */
+
+.chat-execution-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px 0;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.chat-bubble-container {
+  display: flex;
+  width: 100%;
+}
+
+.chat-bubble-container.right {
+  justify-content: flex-end;
+}
+
+.chat-bubble-container.left {
+  justify-content: flex-start;
+}
+
+.chat-bubble {
+  max-width: 85%;
+  padding: 16px 20px;
+  border-radius: 12px;
+  font-size: 15px;
+  line-height: 1.5;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.user-bubble {
+  background: #2a2a2a;
+  color: #fff;
+  border-bottom-right-radius: 4px;
+  border: 1px solid #3a3a3a;
+}
+
+.agent-bubble {
+  background: transparent;
+  color: #d1d5db;
+  padding: 0;
+  box-shadow: none;
+  max-width: 100%;
+  width: 100%;
+}
+
+.agent-status-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #e5e7eb;
+  font-weight: 500;
+  margin-bottom: -10px;
+}
+
+.agent-model-badge {
+  background: #2a2a2a;
+  border: 1px solid #4b5563;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.agent-working-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 16px;
+}
+
+.agent-steps-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-left: 12px;
+  border-left: 2px solid #333;
+  margin-left: 8px;
+}
+
+.timeline-step {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.timeline-text {
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+.navigated-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #332814;
+  color: #eab308;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  border: 1px solid #4a3810;
+  width: fit-content;
+}
+
+/* Expandable Code */
+.expandable-code-block {
+  border: 1px solid #333;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #1e1e1e;
+  margin-top: 4px;
+  max-width: 600px;
+}
+
+.code-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: #252526;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.code-header:hover {
+  background: #2d2d2d;
+}
+
+.code-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #e5e7eb;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.code-content-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 14px;
+  background: #1e1e1e;
+  border-bottom: 1px solid #333;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.copy-btn {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.copy-btn:hover { color: #fff; }
+
+.expandable-code-block pre {
+  margin: 0;
+  padding: 14px;
+  overflow-x: auto;
+  font-size: 13px;
+  color: #d4d4d4;
+  line-height: 1.5;
+}
+
+/* Mini PIP */
+.mini-pip-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: fit-content;
+  margin-top: 24px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.mini-pip-img {
+  width: 280px;
+  height: auto;
+  display: block;
+}
+
+.mini-pip-loading {
+  width: 280px;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #111;
+}
+
+.mini-pip-label {
+  padding: 6px 12px;
+  font-size: 12px;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  border-top: 1px solid #333;
+  background: #222;
+}
+
+/* Markdown Result */
+.final-result-markdown {
+  margin-top: 20px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 20px;
+  color: #e5e7eb;
+}
+
+.final-result-markdown h1,
+.final-result-markdown h2,
+.final-result-markdown h3 {
+  color: #fff;
+  margin-top: 0;
+}
+
+.final-result-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 16px;
+}
+
+.final-result-markdown th {
+  text-align: left;
+  padding: 12px;
+  border-bottom: 1px solid #333;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.final-result-markdown td {
+  padding: 12px;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.final-result-markdown tr:last-child td {
+  border-bottom: none;
+}
+
+.final-result-markdown a {
+  color: #eab308;
+  text-decoration: none;
+}
+
+.final-result-markdown a:hover {
+  text-decoration: underline;
+}
+
+.timeline-error {
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
