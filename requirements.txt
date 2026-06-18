@@ -4,3 +4,7 @@ python-dotenv
 fastapi
 uvicorn
 websockets
+playwright
+authlib
+itsdangerous
+httpx
