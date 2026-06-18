@@ -63,7 +63,7 @@ function App() {
   const [loginError, setLoginError] = useState('');
   const [activeTab, setActiveTab] = useState('dashboard');
   const [apiKey, setApiKey] = useState('');
-  const [selectedModel, setSelectedModel] = useState('gemini-2.5-flash');
+  const [selectedModel, setSelectedModel] = useState('claude-sonnet-4.6');
   const [profileName, setProfileName] = useState('default');
   const [liveUrl, setLiveUrl] = useState(null);
   const [vaultData, setVaultData] = useState([]);
@@ -110,7 +110,14 @@ function App() {
     const savedModel = localStorage.getItem('agent_model');
     const savedProfile = localStorage.getItem('agent_profile');
     if (savedKey) setApiKey(savedKey);
-    if (savedModel) setSelectedModel(savedModel);
+    const validModels = ['bu-mini', 'bu-max', 'bu-ultra', 'gemini-3-flash', 'claude-sonnet-4.6', 'claude-opus-4.6', 'gpt-5.4-mini'];
+    if (savedModel && validModels.includes(savedModel)) {
+      setSelectedModel(savedModel);
+    } else {
+      // Clear any stale/invalid model value (e.g. claude-opus-4.7)
+      localStorage.removeItem('agent_model');
+      setSelectedModel('claude-sonnet-4.6');
+    }
     if (savedProfile) setProfileName(savedProfile);
     
     connectWebSocket();
@@ -321,10 +328,21 @@ function App() {
       });
       const data = await response.json();
       if (data.success) {
-        setToken(data.token);
-        localStorage.setItem('auth_token', data.token);
-        localStorage.setItem('auth_email', email);
-        setIsLoggedIn(true);
+        // Automatically login the user after successful registration
+        const loginRes = await fetch(`${API_BASE}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const loginData = await loginRes.json();
+        if (loginData.success) {
+          localStorage.setItem('auth_token', loginData.token);
+          localStorage.setItem('auth_email', email);
+          setAppState('DASHBOARD');
+        } else {
+          setIsRegistering(false);
+          setLoginError('Registration successful. Please sign in.');
+        }
       } else {
         setLoginError(data.message || 'Registration failed');
       }
@@ -600,21 +618,25 @@ function App() {
                     onChange={(e) => setSelectedModel(e.target.value)}
                     className="auth-input"
                   >
-                    <option value="gemini-2.5-flash">Gemini 2.5 Flash (Recommended)</option>
-                    <option value="gemini-2.5-pro">Gemini 2.5 Pro (Best Quality)</option>
-                    <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                    <option value="claude-sonnet-4.6">Claude Sonnet 4.6 (Recommended)</option>
+                    <option value="claude-opus-4.6">Claude Opus 4.6 (Best Quality)</option>
+                    <option value="gpt-5.4-mini">GPT-5.4 Mini (Fast)</option>
+                    <option value="gemini-3-flash">Gemini 3 Flash</option>
+                    <option value="bu-mini">BU Mini (Cheapest)</option>
+                    <option value="bu-max">BU Max</option>
+                    <option value="bu-ultra">BU Ultra</option>
                   </select>
                 </div>
                 <div className="input-group">
-                  <label>🔑 Gemini API Key (Optional if set in Render)</label>
+                  <label>🔑 Browser Use API Key (Optional if set in .env)</label>
                   <input 
                     type="password" 
-                    placeholder="AIzaSy..."
+                    placeholder="bu_..."
                     value={apiKey}
                     onChange={(e) => setApiKey(e.target.value)}
                     className="auth-input"
                   />
-                  <small style={{ color: '#9ca3af', fontSize: '11px', marginTop: '4px', display: 'block' }}>Optional if GEMINI_API_KEY is configured in your server environment variables.</small>
+                  <small style={{ color: '#9ca3af', fontSize: '11px', marginTop: '4px', display: 'block' }}>Optional if BROWSER_USE_API_KEY is configured in your server environment variables.</small>
                 </div>
                 <div className="input-group">
                   <label>Browser Profile</label>
