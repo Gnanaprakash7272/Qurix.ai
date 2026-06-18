@@ -435,9 +435,9 @@ function App() {
       <div className="auth-container">
         <div className="auth-box new-login-box">
           
-          <div className="auth-logo-vertical">
-             <img src="/logo.png" alt="Qorix AI" className="auth-logo-img-large" />
-             <p className="auth-brand-subtitle">Autonomous Browser Intelligence</p>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
+             <img src="/logo.png" alt="Qorix AI" style={{ height: '130px', width: 'auto', objectFit: 'contain', marginBottom: '8px', filter: 'drop-shadow(0 0 20px rgba(100, 160, 255, 0.3))' }} />
+             <p style={{ fontSize: '14px', fontWeight: 500, color: '#9ca3af', margin: 0 }}>Autonomous Browser Intelligence</p>
           </div>
 
           <h2 className="login-title">{isRegistering ? 'Create an account' : 'Sign In'}</h2>
